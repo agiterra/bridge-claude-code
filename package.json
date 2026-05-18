@@ -1,6 +1,6 @@
 {
   "name": "@agiterra/bridge-claude-code",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "type": "module",
   "bin": "./server.ts",
@@ -8,7 +8,7 @@
     "start": "bun install --no-summary && bun server.ts"
   },
   "dependencies": {
-    "@agiterra/bridge-tools": "agiterra/bridge-tools#v0.2.0",
+    "@agiterra/bridge-tools": "agiterra/bridge-tools#v0.3.0",
     "@agiterra/crew-tools": "agiterra/crew-tools#v2.10.1",
     "@agiterra/wire-tools": "agiterra/wire-tools#v2.6.3",
     "@modelcontextprotocol/sdk": "^1.0.0"

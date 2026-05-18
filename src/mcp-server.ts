@@ -1,12 +1,12 @@
-// MCP server for bridge. v0.1.0 exposes a single tool: `spawn`.
+// MCP server for bridge. v0.2.0 exposes: spawn, handoff, pane_near, close,
+// compose_brief, health.
 //
-// Future:
-//   - Consolidate crew/wire/wire-ipc/knowledge/knowledge-indexer MCP surface
-//     into this server (replace/wrap/pass-through curation per the plan).
-//   - Discover bridge-X integration plugins via installed_plugins.json scan +
-//     dynamic-import of their bridge_integration entry modules.
-//   - Add remaining composite tools (paneNear, personaiInit, health, handoff,
-//     dispatch, close, composeBrief).
+// Not yet:
+//   - dispatch (composite — landing in bridge-tools v0.4)
+//   - personai_init (composite — landing soon)
+//   - Consolidated MCP surface (crew/wire/wire-ipc/knowledge/knowledge-indexer
+//     replace/wrap/pass-through curation)
+//   - Hook discovery for bridge-X integration plugins (empty registry shipped)
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -22,20 +22,28 @@ import {
 } from "@agiterra/crew-tools";
 import { importKeyPair } from "@agiterra/wire-tools";
 
-import { spawn, type SpawnDeps } from "@agiterra/bridge-tools/spawn";
+import {
+  spawn,
+  handoff,
+  paneNear,
+  close as closeComposite,
+  composeBrief,
+  health,
+  type SpawnDeps,
+} from "@agiterra/bridge-tools";
 import type {
   SpawnOptions,
   BridgeHook,
 } from "@agiterra/bridge-tools/types";
 
-const PKG_VERSION = "0.1.0";
+const PKG_VERSION = "0.2.0";
 
 const mcp = new Server(
   { name: "bridge", version: PKG_VERSION },
   {
     capabilities: { tools: {} },
     instructions:
-      "Bridge — the orchestrator's plugin. Single-call composite tools for the N-step orchestration dances (spawn, dispatch, handoff, etc.). Use `spawn` to bring up a new agent with a finished task brief; bridge handles wire identity registration, crew launch, pane placement, and IPC kickoff in one shot.",
+      "Bridge — the orchestrator's plugin. Single-call composite tools that collapse the orchestrator's N-step dances (spawn, handoff, close, etc.) into one call each. Use spawn to bring up a new agent with a finished task brief; bridge handles wire identity registration, crew launch, pane placement, and IPC kickoff in one shot. pane_near resolves 'right of babka'-style placement intent without spawning. compose_brief is the dry-run inspector. health is the cross-leg diagnostic.",
   },
 );
 
@@ -44,60 +52,100 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "spawn",
       description:
-        "Spawn a new agent end-to-end. Collapses the 6-step dance (wire register → env-map assembly → crew launch → pane create → attach → IPC kickoff) into one call. `roles` are opaque tags forwarded to the worker as AGENT_ROLES. `task` is the finished brief (orchestrator pre-assembled). `placement.near + direction` puts the new pane next to a known agent/pane; add `detached: true` for headless. `env` overrides per-spawn vars (fresh GH tokens, task-specific URLs, etc.). Returns the new agent's id, wire identity, applied capabilities, and brief_sent flag.",
+        "Spawn a new agent end-to-end. Collapses the 6-step dance (wire register → env-map → crew launch → pane create → attach → IPC kickoff) into one call. `roles` are opaque tags forwarded as AGENT_ROLES. `task` is the finished brief. `placement.near + direction` puts the new pane next to a known agent/pane; add `detached: true` for headless. `env` overrides per-spawn vars. Returns {agent_id, wire_identity, applied_capabilities, brief_sent}.",
       inputSchema: {
         type: "object",
         properties: {
-          agent_id: {
-            type: "string",
-            description: "Unique identifier for the new agent on Wire.",
-          },
-          display_name: {
-            type: "string",
-            description: "Display name. Defaults to agent_id.",
-          },
-          roles: {
-            type: "array",
-            items: { type: "string" },
-            description: "Opaque role tags forwarded to the worker as AGENT_ROLES (comma-joined). Bridge does not interpret these.",
-          },
-          task: {
-            type: "string",
-            description: "Finished task brief. Sent as the IPC kickoff payload.",
-          },
-          capabilities: {
-            type: "array",
-            items: { type: "string" },
-            description: "Capabilities to dispatch pre_spawn BridgeHooks for. v0.1.0 ships no hook registry yet — leave empty.",
-          },
-          placement: {
-            type: "object",
-            description: "Where to place the new pane. v0.1.0 supports relative placement (near + direction). Omit for headless.",
-          },
-          env: {
-            type: "object",
-            description: "Per-spawn env overrides — fresh tokens, task-specific URLs, etc.",
-          },
-          runtime: {
-            type: "string",
-            description: "Runtime to launch (e.g., 'claude', 'codex').",
-          },
-          project_dir: {
-            type: "string",
-            description: "Working directory for the spawned process.",
-          },
+          agent_id: { type: "string" },
+          display_name: { type: "string" },
+          roles: { type: "array", items: { type: "string" } },
+          task: { type: "string" },
+          capabilities: { type: "array", items: { type: "string" } },
+          placement: { type: "object" },
+          env: { type: "object" },
+          runtime: { type: "string" },
+          project_dir: { type: "string" },
         },
         required: ["agent_id", "roles", "task"],
+      },
+    },
+    {
+      name: "handoff",
+      description:
+        "Coordinated graceful exit of a worker agent. Publishes a bridge.handoff ack on Wire (so monitors know it's a graceful exit, not a reap), then calls crew.closeAgent (sends /exit, runs SessionEnd hooks, waits for clean shutdown), then optionally closes the pane. The closing agent is responsible for running /knowledge:save itself BEFORE signaling ready-to-close; bridge does not invoke that.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agent_id: { type: "string" },
+          close_pane: { type: "string" },
+          timeout_ms: { type: "number" },
+        },
+        required: ["agent_id"],
+      },
+    },
+    {
+      name: "pane_near",
+      description:
+        "Resolve 'near X, direction Y' placement intent into a concrete pane spec. Walks the crew tree to find the anchor (by pane name OR agent name → attached pane), then returns {tab, anchor_pane, direction, split_direction, via_agent}. Useful when the orchestrator wants to plan placement before spawning.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          near: { type: "string" },
+          direction: { type: "string", enum: ["right", "below", "left", "above"] },
+        },
+        required: ["near", "direction"],
+      },
+    },
+    {
+      name: "close",
+      description:
+        "Collapsed wrap-up dance: snapshot the agent's screen via crew.readAgent (so you can audit/journal it BEFORE the session is gone), then crew.closeAgent (graceful /exit), then optionally pane_close. No precondition enforcement — bridge collapses the mechanical dance; the orchestrator owns whatever discipline checks (Linear status, audit checklist) upstream.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agent_id: { type: "string" },
+          close_pane: { type: "string" },
+          skip_snapshot: { type: "boolean" },
+          timeout_ms: { type: "number" },
+        },
+        required: ["agent_id"],
+      },
+    },
+    {
+      name: "compose_brief",
+      description:
+        "Dry-run preview of what spawn WOULD do without spawning. Returns assembled env (with AGENT_PRIVATE_KEY placeholder), resolved placement, hooks that would run, capabilities with no registered hook, and notes for orchestrator review. Hooks are NOT invoked (avoids side effects in dry-run). Takes the same arguments as spawn.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agent_id: { type: "string" },
+          display_name: { type: "string" },
+          roles: { type: "array", items: { type: "string" } },
+          task: { type: "string" },
+          capabilities: { type: "array", items: { type: "string" } },
+          placement: { type: "object" },
+          env: { type: "object" },
+          runtime: { type: "string" },
+          project_dir: { type: "string" },
+        },
+        required: ["agent_id", "roles", "task"],
+      },
+    },
+    {
+      name: "health",
+      description:
+        "Cross-leg diagnostic. Pings the wire server, counts crew agents/panes/tabs, checks the knowledge vault path and journal.db presence. Read-only. Useful at session start or before a complex orchestration push.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          vault_path: { type: "string" },
+        },
       },
     },
   ],
 }));
 
 mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
-  if (req.params.name !== "spawn") {
-    throw new Error(`unknown tool: ${req.params.name}`);
-  }
-
   if (!deps) {
     return {
       content: [{ type: "text" as const, text: "bridge: not initialized (missing AGENT_ID, AGENT_PRIVATE_KEY, or WIRE_URL env)" }],
@@ -105,16 +153,43 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
     };
   }
 
-  const opts = req.params.arguments as unknown as SpawnOptions;
+  const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+
   try {
-    const result = await spawn(opts, deps, EMPTY_REGISTRY);
+    let result: unknown;
+    switch (req.params.name) {
+      case "spawn":
+        result = await spawn(args as unknown as SpawnOptions, deps, EMPTY_REGISTRY);
+        break;
+      case "handoff":
+        result = await handoff(args as any, deps);
+        break;
+      case "pane_near":
+        result = paneNear(args as any, { orchestrator: deps.orchestrator });
+        break;
+      case "close":
+        result = await closeComposite(args as any, { orchestrator: deps.orchestrator });
+        break;
+      case "compose_brief":
+        result = composeBrief(
+          args as unknown as SpawnOptions,
+          { orchestrator: deps.orchestrator, wire_url: deps.wire_url, parent_agent_id: deps.parent_agent_id },
+          EMPTY_REGISTRY,
+        );
+        break;
+      case "health":
+        result = await health(args as any, { orchestrator: deps.orchestrator, wire_url: deps.wire_url });
+        break;
+      default:
+        throw new Error(`unknown tool: ${req.params.name}`);
+    }
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
     };
   } catch (e: unknown) {
     const err = e as Error;
     return {
-      content: [{ type: "text" as const, text: `spawn failed: ${err.message}\n${err.stack ?? ""}` }],
+      content: [{ type: "text" as const, text: `${req.params.name} failed: ${err.message}\n${err.stack ?? ""}` }],
       isError: true,
     };
   }
@@ -130,7 +205,7 @@ export async function startServer(): Promise<void> {
 
   if (!AGENT_ID || !rawKey || !WIRE_URL) {
     console.error(
-      `[bridge] missing required env: AGENT_ID=${!!AGENT_ID} AGENT_PRIVATE_KEY=${!!rawKey} WIRE_URL=${!!WIRE_URL} — spawn tool will return errors until set`,
+      `[bridge] missing required env: AGENT_ID=${!!AGENT_ID} AGENT_PRIVATE_KEY=${!!rawKey} WIRE_URL=${!!WIRE_URL} — tools will return errors until set`,
     );
   } else {
     const keypair = await importKeyPair(rawKey);
