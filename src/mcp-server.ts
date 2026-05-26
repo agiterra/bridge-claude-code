@@ -52,7 +52,7 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "spawn",
       description:
-        "Spawn a new agent end-to-end. Collapses the 6-step dance (wire register → env-map → crew launch → pane create → attach → IPC kickoff) into one call. `roles` are opaque tags forwarded as AGENT_ROLES. `task` is the finished brief. `placement.near + direction` puts the new pane next to a known agent/pane; add `detached: true` for headless. `env` overrides per-spawn vars. Returns {agent_id, wire_identity, applied_capabilities, brief_sent}.",
+        "Spawn a new agent end-to-end. Collapses the 6-step dance (wire register → env-map → crew launch → pane create → attach → IPC kickoff) into one call. `roles` are opaque tags forwarded as AGENT_ROLES. `task` is the finished brief. `placement.near + direction` puts the new pane next to a known agent/pane; add `detached: true` for headless. `env` overrides per-spawn vars. `badge` (optional) is multi-line text shown in the pane's top-right when attached — typical format: 'Name — Role\\nTicket #ID'. Returns {agent_id, wire_identity, applied_capabilities, brief_sent}.",
       inputSchema: {
         type: "object",
         properties: {
@@ -65,6 +65,7 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
           env: { type: "object" },
           runtime: { type: "string" },
           project_dir: { type: "string" },
+          badge: { type: "string" },
         },
         required: ["agent_id", "roles", "task"],
       },
@@ -127,6 +128,7 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
           env: { type: "object" },
           runtime: { type: "string" },
           project_dir: { type: "string" },
+          badge: { type: "string" },
         },
         required: ["agent_id", "roles", "task"],
       },
