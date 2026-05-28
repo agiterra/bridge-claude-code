@@ -208,6 +208,10 @@ export async function startServer(): Promise<void> {
   const AGENT_ID = process.env.AGENT_ID;
   const rawKey = process.env.AGENT_PRIVATE_KEY;
   const WIRE_URL = process.env.WIRE_URL;
+  // Optional — used by spawn to forward into the spawned agent's env so
+  // plugins that advertise webhook URLs (github-tools/register_pr_webhook,
+  // slack-tools/register_slack_app) get a publicly-reachable URL.
+  const WIRE_EXTERNAL_URL = process.env.WIRE_EXTERNAL_URL;
 
   if (!AGENT_ID || !rawKey || !WIRE_URL) {
     console.error(
@@ -221,10 +225,11 @@ export async function startServer(): Promise<void> {
     deps = {
       orchestrator,
       wire_url: WIRE_URL,
+      wire_external_url: WIRE_EXTERNAL_URL,
       parent_agent_id: AGENT_ID,
       parent_signing_key: keypair.privateKey,
     };
-    console.error(`[bridge] ready (agent=${AGENT_ID}, backend=${terminalType})`);
+    console.error(`[bridge] ready (agent=${AGENT_ID}, backend=${terminalType}, wire_external=${WIRE_EXTERNAL_URL ?? "(none, falls back to WIRE_URL)"})`);
   }
 
   const transport = new StdioServerTransport();
