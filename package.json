@@ -1,6 +1,6 @@
 {
   "name": "@agiterra/bridge-claude-code",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "license": "MIT",
   "type": "module",
   "bin": "./server.ts",
@@ -8,7 +8,7 @@
     "start": "bun install --no-summary && ./node_modules/@agiterra/mcp-tee/bin/mcp-tee.sh bridge bun server.ts"
   },
   "dependencies": {
-    "@agiterra/bridge-tools": "agiterra/bridge-tools#v0.9.0",
+    "@agiterra/bridge-tools": "agiterra/bridge-tools#v0.10.0",
     "@agiterra/crew-tools": "agiterra/crew-tools#v2.11.0",
     "@agiterra/mcp-tee": "agiterra/mcp-tee#v0.1.0",
     "@agiterra/wire-tools": "agiterra/wire-tools#v2.8.0",
