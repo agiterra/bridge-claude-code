@@ -1,7 +1,7 @@
 {
   "name": "bridge",
   "description": "Bridge — the orchestrator's plugin in the Agiterra Multi-Agent Toolkit. Consolidates crew + wire + wire-ipc + knowledge + knowledge-indexer MCP surface, adds composite tools (spawn, dispatch, handoff, health, personai-init) that collapse the orchestrator's N-step dances into single calls. Discovers bridge-X integration plugins (bridge-github, bridge-linear, etc.) via installed_plugins.json scan.",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "keywords": ["bridge", "orchestrator", "amat", "agent", "mcp"],
   "postInstall": "bun install --frozen-lockfile",
   "postUpdate": "bun install --frozen-lockfile"
