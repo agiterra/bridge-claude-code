@@ -52,7 +52,7 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "spawn",
       description:
-        "Spawn a new agent end-to-end. Collapses the 6-step dance (wire register → env-map → crew launch → pane create → attach → IPC kickoff) into one call. `roles` are opaque tags forwarded as AGENT_ROLES. `task` is the finished brief. `placement.near + direction` puts the new pane next to a known agent/pane; add `detached: true` for headless. `env` overrides per-spawn vars. `badge` (optional) is multi-line text shown in the pane's top-right when attached — typical format: 'Name — Role\\nTicket #ID'. `branch` (optional) is the git branch the agent works on — when set, bridge creates an isolated worktree under `<project_dir>/worktrees/<branch>` to prevent concurrent agents in the same repo from clobbering each other's uncommitted work via git checkout. Set `worktree: false` to opt out of isolation. Returns {agent_id, wire_identity, applied_capabilities, brief_sent}.",
+        "Spawn a new agent end-to-end. Collapses the 6-step dance (wire register → env-map → crew launch → pane create → attach → IPC kickoff) into one call. `roles` are opaque tags forwarded as AGENT_ROLES. `task` is the finished brief. `placement.near + direction` puts the new pane next to a known agent/pane; add `detached: true` for headless. `env` overrides per-spawn vars. `badge` (optional) is multi-line text shown in the pane's top-right when attached — typical format: 'Name — Role\\nTicket #ID'. `project_dir` is the spawn cwd — the agent loads its plugins from that dir's installed_plugins.json entries, so point it at a dir that has them (e.g. a project root, not a worktree subpath). `branch` (optional) is forwarded as the AGENT_BRANCH env hint; bridge does NOT create worktrees or manage layout — the agent makes its own worktree if it wants one. Returns {agent_id, wire_identity, applied_capabilities, brief_sent}.",
       inputSchema: {
         type: "object",
         properties: {
@@ -67,7 +67,6 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
           project_dir: { type: "string" },
           badge: { type: "string" },
           branch: { type: "string" },
-          worktree: { type: "boolean" },
         },
         required: ["agent_id", "roles", "task"],
       },
@@ -132,7 +131,6 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
           project_dir: { type: "string" },
           badge: { type: "string" },
           branch: { type: "string" },
-          worktree: { type: "boolean" },
         },
         required: ["agent_id", "roles", "task"],
       },
