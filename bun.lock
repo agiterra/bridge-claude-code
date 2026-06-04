@@ -5,8 +5,8 @@
     "": {
       "name": "@agiterra/bridge-claude-code",
       "dependencies": {
-        "@agiterra/bridge-tools": "agiterra/bridge-tools#v1.0.0",
-        "@agiterra/crew-tools": "agiterra/crew-tools#v2.11.0",
+        "@agiterra/bridge-tools": "agiterra/bridge-tools#v1.0.1",
+        "@agiterra/crew-tools": "agiterra/crew-tools#v2.14.1",
         "@agiterra/mcp-tee": "agiterra/mcp-tee#v0.1.0",
         "@agiterra/wire-tools": "agiterra/wire-tools#v2.8.0",
         "@modelcontextprotocol/sdk": "^1.0.0",
@@ -17,9 +17,9 @@
     },
   },
   "packages": {
-    "@agiterra/bridge-tools": ["@agiterra/bridge-tools@github:agiterra/bridge-tools#4315f3e", { "dependencies": { "@agiterra/crew-tools": "agiterra/crew-tools#v2.11.0", "@agiterra/knowledge-indexer-tools": "agiterra/knowledge-indexer-tools#v1.2.0", "@agiterra/knowledge-tools": "agiterra/knowledge-tools#v0.2.3", "@agiterra/wire-tools": "agiterra/wire-tools#v2.8.0", "@modelcontextprotocol/sdk": "^1.29.0" } }, "agiterra-bridge-tools-4315f3e", "sha512-33XJk+NRgmIgJpMOF6KLTQKj5DrIsRNazOCbA0nyrb7zG5c/N8wmSwK2kpyPDX74zcgfe4A6kOkuxN/l04PpEA=="],
+    "@agiterra/bridge-tools": ["@agiterra/bridge-tools@github:agiterra/bridge-tools#533073d", { "dependencies": { "@agiterra/crew-tools": "agiterra/crew-tools#v2.14.1", "@agiterra/knowledge-indexer-tools": "agiterra/knowledge-indexer-tools#v1.2.0", "@agiterra/knowledge-tools": "agiterra/knowledge-tools#v0.2.3", "@agiterra/wire-tools": "agiterra/wire-tools#v2.8.0", "@modelcontextprotocol/sdk": "^1.29.0" } }, "agiterra-bridge-tools-533073d", "sha512-h7+baRb6KqbeO9B96WKWLR/cOw+up5GKp5M3LFZIWGylL5YjRbgs6QcVUyHc2dNd7hGr6W7OYOCva+Vm5yNhMw=="],
 
-    "@agiterra/crew-tools": ["@agiterra/crew-tools@github:agiterra/crew-tools#e7cada0", { "dependencies": { "@modelcontextprotocol/sdk": "^1.29.0" }, "bin": { "crew": "./src/cli.ts" } }, "agiterra-crew-tools-e7cada0", "sha512-MPSohRUixNTdXfbqNtnk0fKZb0hfN/NmSrcunNFbGme3d8HNIqNsQRICapMEkH8POOmoqZU+lMmiNk260q+i/Q=="],
+    "@agiterra/crew-tools": ["@agiterra/crew-tools@github:agiterra/crew-tools#9c87ec2", { "dependencies": { "@modelcontextprotocol/sdk": "^1.29.0" }, "bin": { "crew": "./src/cli.ts" } }, "agiterra-crew-tools-9c87ec2", "sha512-UtwKaXIqT/LGqjuuEO3Rgbreh8+ORfxv5RTiCzVPtwu4/6oIwIBc1ptlVcVWVVIVgsBScT0+NHaTQIshXDnitA=="],
 
     "@agiterra/knowledge-indexer-tools": ["@agiterra/knowledge-indexer-tools@github:agiterra/knowledge-indexer-tools#9919462", { "dependencies": { "@agiterra/crew-tools": "agiterra/crew-tools#v2.5.1", "@agiterra/knowledge-tools": "agiterra/knowledge-tools#v0.2.3" } }, "agiterra-knowledge-indexer-tools-9919462", "sha512-PNXjdF8+xCKcL2EVgaPmvNCfHV8RRIZQjQ8wbiMTi1ok292gHleOtB3MIzIEPTGvDgUY7zHXHp9oRPGRn4ytpA=="],
 
@@ -91,7 +91,7 @@
 
     "eventsource": ["eventsource@3.0.7", "", { "dependencies": { "eventsource-parser": "^3.0.1" } }, "sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA=="],
 
-    "eventsource-parser": ["eventsource-parser@3.0.8", "", {}, "sha512-70QWGkr4snxr0OXLRWsFLeRBIRPuQOvt4s8QYjmUlmlkyTZkRqS7EDVRZtzU3TiyDbXSzaOeF0XUKy8PchzukQ=="],
+    "eventsource-parser": ["eventsource-parser@3.1.0", "", {}, "sha512-kJezFj9YFAMLeORyi7aCLxLbD5/qWMQnoMVlVPyHIll7lgRJCc3JVln9Vgl9nwQi0YkMnhdGTMNn7CkRRAptMg=="],
 
     "express": ["express@5.2.1", "", { "dependencies": { "accepts": "^2.0.0", "body-parser": "^2.2.1", "content-disposition": "^1.0.0", "content-type": "^1.0.5", "cookie": "^0.7.1", "cookie-signature": "^1.2.1", "debug": "^4.4.0", "depd": "^2.0.0", "encodeurl": "^2.0.0", "escape-html": "^1.0.3", "etag": "^1.8.1", "finalhandler": "^2.1.0", "fresh": "^2.0.0", "http-errors": "^2.0.0", "merge-descriptors": "^2.0.0", "mime-types": "^3.0.0", "on-finished": "^2.4.1", "once": "^1.4.0", "parseurl": "^1.3.3", "proxy-addr": "^2.0.7", "qs": "^6.14.0", "range-parser": "^1.2.1", "router": "^2.2.0", "send": "^1.1.0", "serve-static": "^2.2.0", "statuses": "^2.0.1", "type-is": "^2.0.1", "vary": "^1.1.2" } }, "sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw=="],
 
@@ -117,7 +117,7 @@
 
     "has-symbols": ["has-symbols@1.1.0", "", {}, "sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ=="],
 
-    "hasown": ["hasown@2.0.3", "", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-ej4AhfhfL2Q2zpMmLo7U1Uv9+PyhIZpgQLGT1F9miIGmiCJIoCgSmczFdrc97mWT4kVY72KA+WnnhJ5pghSvSg=="],
+    "hasown": ["hasown@2.0.4", "", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A=="],
 
     "hono": ["hono@4.12.23", "", {}, "sha512-eIaZ9qDgu7XV0pxOCrg7/WhnQ6Ivm22UcxhXx/A3dcbqbbYgBEkc6e/J/s7j2tS96zoB0S9VBdLwQNCWwUo4LA=="],
 
@@ -244,10 +244,6 @@
     "zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
     "zod-to-json-schema": ["zod-to-json-schema@3.25.2", "", { "peerDependencies": { "zod": "^3.25.28 || ^4" } }, "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA=="],
-
-    "@agiterra/bridge-tools/@agiterra/crew-tools": ["@agiterra/crew-tools@github:agiterra/crew-tools#e7cada0", { "dependencies": { "@modelcontextprotocol/sdk": "^1.29.0" }, "bin": { "crew": "./src/cli.ts" } }, "agiterra-crew-tools-e7cada0", "sha512-MPSohRUixNTdXfbqNtnk0fKZb0hfN/NmSrcunNFbGme3d8HNIqNsQRICapMEkH8POOmoqZU+lMmiNk260q+i/Q=="],
-
-    "@agiterra/bridge-tools/@agiterra/wire-tools": ["@agiterra/wire-tools@github:agiterra/wire-tools#e61ecbf", { "dependencies": { "@modelcontextprotocol/sdk": "^1.29.0", "pino": "^10.3.1" } }, "agiterra-wire-tools-e61ecbf", "sha512-sdNqDDHFSb47vRt60ji9A9U6oBFWuq0GlgHFyRd4xvOeKg0k5BjDk6xsmyvVSzBa8+Dp6ubNea8+J7ZY1of4Pw=="],
 
     "@agiterra/knowledge-indexer-tools/@agiterra/crew-tools": ["@agiterra/crew-tools@github:agiterra/crew-tools#6605b0d", { "dependencies": { "@modelcontextprotocol/sdk": "^1.29.0" }, "bin": { "crew": "./src/cli.ts" } }, "agiterra-crew-tools-6605b0d", "sha512-eTZpLgxmyKzeHtRlT20p+l5PxudDgPec3XoQrSTcgkSFdBZhDYCjvM1bNUa+aXgDEKoX8HxogyEHJ2lu2j6xKQ=="],
 
