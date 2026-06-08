@@ -790,7 +790,7 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "spawn",
       description:
-        "Spawn a new agent end-to-end. Collapses the 6-step dance (wire register → env-map → crew launch → pane create → attach → IPC kickoff) into one call. `roles` are opaque tags forwarded as AGENT_ROLES. `task` is the finished brief. `placement.near + direction` puts the new pane next to a known agent/pane; add `detached: true` for headless. `env` overrides per-spawn vars. `badge` (optional) is multi-line text shown in the pane's top-right when attached — typical format: 'Name — Role\\nTicket #ID'. `project_dir` is the spawn cwd — the agent loads its plugins from that dir's installed_plugins.json entries, so point it at a dir that has them (e.g. a project root, not a worktree subpath). `branch` (optional) is forwarded as the AGENT_BRANCH env hint; bridge does NOT create worktrees or manage layout — the agent makes its own worktree if it wants one. Returns {agent_id, wire_identity, applied_capabilities, brief_sent}.",
+        "Spawn a new agent end-to-end. Collapses the 6-step dance (wire register → env-map → crew launch → pane create → attach → IPC kickoff) into one call. `roles` are opaque tags forwarded as AGENT_ROLES. `task` is the finished brief. `placement.near + direction` puts the new pane next to a known agent/pane; add `detached: true` for headless. `env` overrides per-spawn vars. `badge` (optional) is multi-line text shown in the pane's top-right when attached — typical format: 'Name — Role\\nTicket #ID'. `project_dir` is the spawn cwd — the agent loads its plugins from that dir's installed_plugins.json entries, so point it at a dir that has them (e.g. a project root, not a worktree subpath). `branch` (optional) is forwarded as the AGENT_BRANCH env hint; bridge does NOT create worktrees or manage layout — the agent makes its own worktree if it wants one. Spawning into a git-worktree subpath (`.../worktrees/<branch>`) is REJECTED with a clear error — the agent would load no plugins from there and launch IPC-blind; spawn at the repo root and pass `branch`. `force_rotate` (optional): if `agent_id` was previously reaped, pass `true` to mint a fresh Wire identity (otherwise registration 409s on the stale pubkey); only use when no live process holds the old key. Returns {agent_id, wire_identity, applied_capabilities, brief_sent}.",
       inputSchema: {
         type: "object",
         properties: {
@@ -805,6 +805,7 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
           project_dir: { type: "string" },
           badge: { type: "string" },
           branch: { type: "string" },
+          force_rotate: { type: "boolean" },
         },
         required: ["agent_id", "roles", "task"],
       },
@@ -869,6 +870,7 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
           project_dir: { type: "string" },
           badge: { type: "string" },
           branch: { type: "string" },
+          force_rotate: { type: "boolean" },
         },
         required: ["agent_id", "roles", "task"],
       },
