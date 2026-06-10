@@ -5,8 +5,8 @@
     "": {
       "name": "@agiterra/bridge-claude-code",
       "dependencies": {
-        "@agiterra/bridge-tools": "agiterra/bridge-tools#v1.0.1",
-        "@agiterra/crew-tools": "agiterra/crew-tools#v2.14.1",
+        "@agiterra/bridge-tools": "agiterra/bridge-tools#v1.1.1",
+        "@agiterra/crew-tools": "agiterra/crew-tools#v2.15.0",
         "@agiterra/mcp-tee": "agiterra/mcp-tee#v0.1.0",
         "@agiterra/wire-tools": "agiterra/wire-tools#v2.8.0",
         "@modelcontextprotocol/sdk": "^1.0.0",
@@ -17,9 +17,9 @@
     },
   },
   "packages": {
-    "@agiterra/bridge-tools": ["@agiterra/bridge-tools@github:agiterra/bridge-tools#533073d", { "dependencies": { "@agiterra/crew-tools": "agiterra/crew-tools#v2.14.1", "@agiterra/knowledge-indexer-tools": "agiterra/knowledge-indexer-tools#v1.2.0", "@agiterra/knowledge-tools": "agiterra/knowledge-tools#v0.2.3", "@agiterra/wire-tools": "agiterra/wire-tools#v2.8.0", "@modelcontextprotocol/sdk": "^1.29.0" } }, "agiterra-bridge-tools-533073d", "sha512-h7+baRb6KqbeO9B96WKWLR/cOw+up5GKp5M3LFZIWGylL5YjRbgs6QcVUyHc2dNd7hGr6W7OYOCva+Vm5yNhMw=="],
+    "@agiterra/bridge-tools": ["@agiterra/bridge-tools@github:agiterra/bridge-tools#d2bd6c9", { "dependencies": { "@agiterra/crew-tools": "agiterra/crew-tools#v2.15.0", "@agiterra/knowledge-indexer-tools": "agiterra/knowledge-indexer-tools#v1.2.0", "@agiterra/knowledge-tools": "agiterra/knowledge-tools#v0.2.3", "@agiterra/wire-tools": "agiterra/wire-tools#v2.8.0", "@modelcontextprotocol/sdk": "^1.29.0" } }, "agiterra-bridge-tools-d2bd6c9", "sha512-/PV6+3jHGiQy0EAyv9WhNnvqdIGmtYYrhf8gimJdTDyDNRVp0bNABiKtCY4ypBToZiWGKYBY6JApaaOtkU/zRQ=="],
 
-    "@agiterra/crew-tools": ["@agiterra/crew-tools@github:agiterra/crew-tools#9c87ec2", { "dependencies": { "@modelcontextprotocol/sdk": "^1.29.0" }, "bin": { "crew": "./src/cli.ts" } }, "agiterra-crew-tools-9c87ec2", "sha512-UtwKaXIqT/LGqjuuEO3Rgbreh8+ORfxv5RTiCzVPtwu4/6oIwIBc1ptlVcVWVVIVgsBScT0+NHaTQIshXDnitA=="],
+    "@agiterra/crew-tools": ["@agiterra/crew-tools@github:agiterra/crew-tools#3135d83", { "dependencies": { "@modelcontextprotocol/sdk": "^1.29.0" }, "bin": { "crew": "./src/cli.ts" } }, "agiterra-crew-tools-3135d83", "sha512-WhQychnatBOUMzvBB/YOZdqpAiHP7wtTmeJpUkGVTrRie+2LOJue3956dkTAVYJye9GqaPlEmNn0t9InAsZSjA=="],
 
     "@agiterra/knowledge-indexer-tools": ["@agiterra/knowledge-indexer-tools@github:agiterra/knowledge-indexer-tools#9919462", { "dependencies": { "@agiterra/crew-tools": "agiterra/crew-tools#v2.5.1", "@agiterra/knowledge-tools": "agiterra/knowledge-tools#v0.2.3" } }, "agiterra-knowledge-indexer-tools-9919462", "sha512-PNXjdF8+xCKcL2EVgaPmvNCfHV8RRIZQjQ8wbiMTi1ok292gHleOtB3MIzIEPTGvDgUY7zHXHp9oRPGRn4ytpA=="],
 
@@ -37,7 +37,7 @@
 
     "@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
-    "@types/node": ["@types/node@25.9.1", "", { "dependencies": { "undici-types": ">=7.24.0 <7.24.7" } }, "sha512-xfrlY7UD5rMJk3ZVJP8BNzS28J36YJg+xp+LPXV1TdWxr8uMH5A860QNxYDGQe/ylDSgjxE52Q9VnO7p75tJxg=="],
+    "@types/node": ["@types/node@25.9.2", "", { "dependencies": { "undici-types": ">=7.24.0 <7.24.7" } }, "sha512-G05zqtJhcDLb8uslf5EjCxXg9G1KQxiV8OS0R26IC//Eoyitzqe8z37I7cqvnZlrlSfgocQRfSn/AHBZJJFyGw=="],
 
     "accepts": ["accepts@2.0.0", "", { "dependencies": { "mime-types": "^3.0.0", "negotiator": "^1.0.0" } }, "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng=="],
 
@@ -119,7 +119,7 @@
 
     "hasown": ["hasown@2.0.4", "", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A=="],
 
-    "hono": ["hono@4.12.23", "", {}, "sha512-eIaZ9qDgu7XV0pxOCrg7/WhnQ6Ivm22UcxhXx/A3dcbqbbYgBEkc6e/J/s7j2tS96zoB0S9VBdLwQNCWwUo4LA=="],
+    "hono": ["hono@4.12.25", "", {}, "sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ=="],
 
     "http-errors": ["http-errors@2.0.1", "", { "dependencies": { "depd": "~2.0.0", "inherits": "~2.0.4", "setprototypeof": "~1.2.0", "statuses": "~2.0.2", "toidentifier": "~1.0.1" } }, "sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ=="],
 
@@ -211,7 +211,7 @@
 
     "shebang-regex": ["shebang-regex@3.0.0", "", {}, "sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A=="],
 
-    "side-channel": ["side-channel@1.1.0", "", { "dependencies": { "es-errors": "^1.3.0", "object-inspect": "^1.13.3", "side-channel-list": "^1.0.0", "side-channel-map": "^1.0.1", "side-channel-weakmap": "^1.0.2" } }, "sha512-ZX99e6tRweoUXqR+VBrslhda51Nh5MTQwou5tnUDgbtyM0dBgmhEDtWGP/xbKn6hqfPRHujUNwz5fy/wbbhnpw=="],
+    "side-channel": ["side-channel@1.1.1", "", { "dependencies": { "es-errors": "^1.3.0", "object-inspect": "^1.13.4", "side-channel-list": "^1.0.1", "side-channel-map": "^1.0.1", "side-channel-weakmap": "^1.0.2" } }, "sha512-6x6dK6zJdpTzF4sQeNYxwtvBzf6Eg4GtlesS94HOvTudUeyK2WXAaIfmDgsyslYrRBeFIlsi54AYsFGUuhmvrQ=="],
 
     "side-channel-list": ["side-channel-list@1.0.1", "", { "dependencies": { "es-errors": "^1.3.0", "object-inspect": "^1.13.4" } }, "sha512-mjn/0bi/oUURjc5Xl7IaWi/OJJJumuoJFQJfDDyO46+hBWsfaVM65TBHq2eoZBhzl9EchxOijpkbRC8SVBQU0w=="],
 
