@@ -967,6 +967,11 @@ export async function startServer(): Promise<void> {
   // plugins that advertise webhook URLs (github-tools/register_pr_webhook,
   // slack-tools/register_slack_app) get a publicly-reachable URL.
   const WIRE_EXTERNAL_URL = process.env.WIRE_EXTERNAL_URL;
+  // Optional — the BARE host this orchestrator runs on (ssh-reachable as
+  // `tim@<host>`). spawn() forwards it into a LOCAL spawn's WIRE_SSH_HOST so the
+  // dashboard attach button works from another cockpit; remote spawns derive the
+  // host from the target machine row. See [[reference-wireattach-clicktoattach]].
+  const WIRE_SSH_HOST = process.env.WIRE_SSH_HOST;
 
   if (!AGENT_ID || !rawKey || !WIRE_URL) {
     console.error(
@@ -981,6 +986,7 @@ export async function startServer(): Promise<void> {
       orchestrator,
       wire_url: WIRE_URL,
       wire_external_url: WIRE_EXTERNAL_URL,
+      wire_ssh_host: WIRE_SSH_HOST,
       parent_agent_id: AGENT_ID,
       parent_signing_key: keypair.privateKey,
     };
