@@ -30,6 +30,9 @@ import {
   setPlan,
   registerOrRefresh,
   createAuthJwt,
+  RpcClient,
+  WireConnection,
+  derivePublicKeyB64,
 } from "@agiterra/wire-tools";
 
 import {
@@ -161,7 +164,7 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
       },
     },
     handler: async (a, deps) => {
-      let agents = deps.orchestrator.listAgents();
+      let agents = await deps.orchestrator.listAgents();
       if (typeof a.attached === "boolean") {
         agents = agents.filter((ag) => (ag.pane !== null) === a.attached);
       }
@@ -792,7 +795,7 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "spawn",
       description:
-        "Spawn a new agent end-to-end. Collapses the 6-step dance (wire register → env-map → crew launch → pane create → attach → IPC kickoff) into one call. `roles` are opaque tags forwarded as AGENT_ROLES. `task` is the finished brief. `placement.near + direction` puts the new pane next to a known agent/pane; add `detached: true` for headless. `env` overrides per-spawn vars. `badge` (optional) is multi-line text shown in the pane's top-right when attached — typical format: 'Name — Role\\nTicket #ID'. `project_dir` is the spawn cwd — the agent loads its plugins from that dir's installed_plugins.json entries, so point it at a dir that has them (e.g. a project root, not a worktree subpath). `branch` (optional) is forwarded as the AGENT_BRANCH env hint; bridge does NOT create worktrees or manage layout — the agent makes its own worktree if it wants one. Spawning into a git-worktree subpath (`.../worktrees/<branch>`) is REJECTED with a clear error — the agent would load no plugins from there and launch IPC-blind; spawn at the repo root and pass `branch`. `force_rotate` (optional): if `agent_id` was previously reaped, pass `true` to mint a fresh Wire identity (otherwise registration 409s on the stale pubkey); only use when no live process holds the old key. Returns {agent_id, wire_identity, applied_capabilities, brief_sent}.",
+        "Spawn a new agent end-to-end. Collapses the dance (wire register → env-map → crew.agent_spawn RPC → pane attach → IPC kickoff) into one call. The spawn is executed by THIS machine's crew-service (crew.agent_spawn), which owns the OS account (CREW_SVC_SPAWN_UID, e.g. _ephemeral) and creates the screen — the bridge never picks a uid. `roles` are opaque tags forwarded as AGENT_ROLES. `task` is the finished brief. `placement.near + direction` puts the new pane next to a known agent/pane, but ONLY applies when the service spawns under the bridge's own account; a sudo'd spawn (a spawn uid is configured) is headless and placement is ignored (attach later via the dashboard button / crew remote attach). Add `detached: true` to skip placement. `env` overrides per-spawn vars. `badge` (optional) is multi-line text shown in the pane's top-right when attached — typical format: 'Name — Role\\nTicket #ID'. `project_dir` is the spawn cwd — the agent loads its plugins from that dir's installed_plugins.json entries, so point it at a dir that has them (e.g. a project root, not a worktree subpath). `branch` (optional) is forwarded as the AGENT_BRANCH env hint; bridge does NOT create worktrees or manage layout — the agent makes its own worktree if it wants one. Spawning into a git-worktree subpath (`.../worktrees/<branch>`) is REJECTED with a clear error — the agent would load no plugins from there and launch IPC-blind; spawn at the repo root and pass `branch`. `force_rotate` (optional): if `agent_id` was previously reaped, pass `true` to mint a fresh Wire identity (otherwise registration 409s on the stale pubkey); only use when no live process holds the old key. Cross-MACHINE spawns are NOT supported here — spawns land on this machine's crew-service; to spawn elsewhere, ask an orchestrator on that machine. Returns {agent_id, wire_identity, applied_capabilities, brief_sent}.",
       inputSchema: {
         type: "object",
         properties: {
@@ -805,7 +808,6 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
           env: { type: "object" },
           runtime: { type: "string" },
           project_dir: { type: "string" },
-          machine: { type: "string", description: "Cross-machine spawn: name of a registered crew machine (machine_register) to spawn ON. Non-local machine → REMOTE spawn: crew creates the screen there via ssh + sudo into the machine's sanctioned isolated account (inferred — NOT a param), the agent runs headless (placement ignored), dials the remote's local broker, and its Wire identity is registered against that machine's broker_url (approach A). Omit (or a localhost machine) → unchanged local spawn." },
           badge: { type: "string" },
           branch: { type: "string" },
           force_rotate: { type: "boolean" },
@@ -871,7 +873,6 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
           env: { type: "object" },
           runtime: { type: "string" },
           project_dir: { type: "string" },
-          machine: { type: "string", description: "Cross-machine spawn: name of a registered crew machine (machine_register) to spawn ON. Non-local machine → REMOTE spawn: crew creates the screen there via ssh + sudo into the machine's sanctioned isolated account (inferred — NOT a param), the agent runs headless (placement ignored), dials the remote's local broker, and its Wire identity is registered against that machine's broker_url (approach A). Omit (or a localhost machine) → unchanged local spawn." },
           badge: { type: "string" },
           branch: { type: "string" },
           force_rotate: { type: "boolean" },
@@ -966,20 +967,52 @@ export async function startServer(): Promise<void> {
   // slack-tools/register_slack_app) get a publicly-reachable URL.
   const WIRE_EXTERNAL_URL = process.env.WIRE_EXTERNAL_URL;
   // Optional — the BARE host this orchestrator runs on (ssh-reachable as
-  // `tim@<host>`). spawn() forwards it into a LOCAL spawn's WIRE_SSH_HOST so the
-  // dashboard attach button works from another cockpit; remote spawns derive the
-  // host from the target machine row. See [[reference-wireattach-clicktoattach]].
+  // `tim@<host>`). spawn() forwards it into a spawn's WIRE_SSH_HOST so the
+  // dashboard attach button works from another cockpit; for sudo'd spawns the
+  // crew-service overlays its own CREW_SVC_SSH_HOST. [[reference-wireattach-clicktoattach]]
   const WIRE_SSH_HOST = process.env.WIRE_SSH_HOST;
+  // THIS machine's crew-service Wire id — every spawn lands there
+  // (crew.agent_spawn). Convention: crew-svc@<WIRE_INSTANCE_NAME normalized>.
+  // Defaults per instance name if unset; required for spawn to work.
+  const CREW_SVC_DEST = process.env.CREW_SVC_DEST;
 
   if (!AGENT_ID || !rawKey || !WIRE_URL) {
     console.error(
       `[bridge] missing required env: AGENT_ID=${!!AGENT_ID} AGENT_PRIVATE_KEY=${!!rawKey} WIRE_URL=${!!WIRE_URL} — tools will return errors until set`,
+    );
+  } else if (!CREW_SVC_DEST) {
+    console.error(
+      `[bridge] missing CREW_SVC_DEST — the crew-service Wire id spawns route to (e.g. crew-svc@patisserie). spawn() will error until set; other tools work.`,
     );
   } else {
     const keypair = await importKeyPair(rawKey);
     const terminalType = detectTerminal();
     const terminal = await createBackend(terminalType);
     const orchestrator = new Orchestrator(terminal);
+
+    // RPC transport for crew.agent_spawn. The bridge holds its OWN receiving
+    // WireConnection under the parent identity (a distinct cc_session_id so it
+    // coexists with the persona's channel connection); the broker fans the
+    // rpc.reply to both sessions, but wire-tools' channel deliver drops rpc.*
+    // frames so the persona sees no noise, and this client resolves the reply.
+    const pubkey = await derivePublicKeyB64(keypair.privateKey);
+    const rpcClient = new RpcClient({ url: WIRE_URL, agentId: AGENT_ID, signingKey: keypair.privateKey });
+    const rpcConn = new WireConnection({
+      url: WIRE_URL,
+      agentId: AGENT_ID,
+      agentName: AGENT_ID,
+      keyPair: { publicKey: pubkey, privateKey: keypair.privateKey },
+      ccSessionId: `bridge-rpc-${AGENT_ID}`,
+      deliver: async ({ raw }) => { rpcClient.handleEvent(raw); },
+    });
+    // Best-effort: if the connection can't open (broker down), spawn's RPC
+    // will time out with a clear message — don't crash the whole MCP server.
+    try {
+      await rpcConn.start();
+    } catch (e) {
+      console.error(`[bridge] RPC connection failed to start (spawn will error until the broker is reachable): ${(e as Error).message}`);
+    }
+
     deps = {
       orchestrator,
       wire_url: WIRE_URL,
@@ -987,8 +1020,10 @@ export async function startServer(): Promise<void> {
       wire_ssh_host: WIRE_SSH_HOST,
       parent_agent_id: AGENT_ID,
       parent_signing_key: keypair.privateKey,
+      rpc_request: (dest, method, params, timeoutMs) => rpcClient.request(dest, method, params, timeoutMs),
+      crew_svc_dest: CREW_SVC_DEST,
     };
-    console.error(`[bridge] ready (agent=${AGENT_ID}, backend=${terminalType}, wire_external=${WIRE_EXTERNAL_URL ?? "(none, falls back to WIRE_URL)"})`);
+    console.error(`[bridge] ready (agent=${AGENT_ID}, backend=${terminalType}, crew_svc=${CREW_SVC_DEST}, wire_external=${WIRE_EXTERNAL_URL ?? "(none, falls back to WIRE_URL)"})`);
   }
 
   const transport = new StdioServerTransport();
