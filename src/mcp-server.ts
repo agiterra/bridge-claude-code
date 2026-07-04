@@ -72,7 +72,10 @@ const mcp = new Server(
 // (deps.parent_agent_id / deps.parent_signing_key / deps.wire_url).
 //
 // EXCLUDED from the crew subset (overlap bridge composites): agent_launch,
-// agent_register, agent_close. Wire-ipc/github/knowledge/* stay separate plugins.
+// agent_close. (agent_register is INCLUDED — it's an orchestrator's SELF-
+// registration, which no bridge composite covers; personas need it to seed
+// their own crews.db row on boot. Added 2.0.1.) Wire-ipc/github/knowledge/*
+// stay separate plugins.
 
 interface ProxyTool {
   name: string;
@@ -304,6 +307,31 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
     handler: async (a, deps) => {
       const outcome = await deps.orchestrator.setAgentBadge(a.id as string, a.text as string);
       return { badge_set: a.id, text: a.text, ...outcome };
+    },
+  },
+  {
+    name: "agent_register",
+    description:
+      "Register YOURSELF as a crew agent in crews.db. Call this ON BOOT (before agent_badge) if you run in a screen session. It reads your STY, verifies the screen is alive, seeds your registry row, and auto-links your pane if one exists with the same name. Personas launched via personai-launch (not crew spawn) get NO auto-row — self-register is the sanctioned path for an orchestrator to appear in the registry (e.g. after a crews.db migration/reset that dropped persona rows). This is your OWN row; to bring up another agent use spawn.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "Your agent ID (your Wire agent name)" },
+        name: { type: "string", description: "Display name" },
+        runtime: { type: "string", description: "Runtime (default claude-code)" },
+        cc_session_id: { type: "string", description: "Claude Code session ID — auto-detected from ~/.claude/sessions/ if omitted" },
+      },
+      required: ["id", "name"],
+    },
+    handler: async (a, deps) => {
+      const agent = await deps.orchestrator.registerAgent({
+        id: a.id as string,
+        displayName: a.name as string,
+        runtime: a.runtime as string | undefined,
+        ccSessionId: a.cc_session_id as string | undefined,
+        callerSessionId: await callerSession(deps),
+      });
+      return { registered: agent.id, screen_name: agent.screen_name, pane: agent.pane };
     },
   },
   {
