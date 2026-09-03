@@ -20,6 +20,7 @@ import {
 import {
   Orchestrator,
   createBackend,
+  createCrewRpcWriter,
   detectTerminal,
   listThemes,
   loadTheme,
@@ -34,6 +35,14 @@ import {
   WireConnection,
   derivePublicKeyB64,
 } from "@agiterra/wire-tools";
+import { hostname as osHostname } from "node:os";
+
+// crew-service RPC writer (lazy, cached). Explicit dest so the writer never opens crews.db to find it.
+let _crewRpc: Awaited<ReturnType<typeof createCrewRpcWriter>> | null = null;
+async function getCrewRpc() {
+  if (!_crewRpc) _crewRpc = await createCrewRpcWriter({ dest: process.env.CREW_SVC_DEST ?? `crew-svc@${osHostname().split(".")[0]}` });
+  return _crewRpc;
+}
 
 import {
   spawn,
@@ -132,12 +141,19 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
       required: ["id", "text"],
     },
     handler: async (a, deps) => {
-      const sendRes = await deps.orchestrator.sendToAgent(
-        a.id as string,
-        a.text as string,
-        (a.cc_session_id as string | undefined) ?? (a.session as string | undefined),
-      );
-      return { sent: true, landed: sendRes.landed, screen: sendRes.screen };
+      const id = a.id as string, text = a.text as string;
+      const cc = (a.cc_session_id as string | undefined) ?? (a.session as string | undefined);
+      // 2026-09-03 (Brioche 597580): send through crew-service, as the crew plugin does. The local
+      // orchestrator touches crews.db (owned by tim) and fails 'attempt to write a readonly database'
+      // from a persona uid. Local path stays as the fallback when the service is unreachable.
+      try {
+        const rpc = await getCrewRpc();
+        const r = (await rpc.request("crew.agent_send", { id, text, cc_session_id: cc })) as { landed?: boolean; screen?: string };
+        return { sent: true, landed: r.landed, screen: r.screen, via: "crew-service" };
+      } catch (e) {
+        const sendRes = await deps.orchestrator.sendToAgent(id, text, cc);
+        return { sent: true, landed: sendRes.landed, screen: sendRes.screen, via: "local", crew_service_error: String((e as Error).message).slice(0, 160) };
+      }
     },
   },
   {
