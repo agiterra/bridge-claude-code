@@ -231,19 +231,44 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
       },
       required: ["id"],
     },
-    handler: async (a, deps) =>
-      deps.orchestrator.resumeAgent({
-        id: a.id as string,
-        ccSessionId: a.cc_session_id as string | undefined,
-        projectDir: a.project_dir as string | undefined,
-        env: a.env as Record<string, string> | undefined,
-        channels: a.channels as string[] | undefined,
-        extraFlags: a.extra_flags as string | undefined,
-        attachToPane: a.attach_to_pane as string | undefined,
-        displayName: a.display_name as string | undefined,
-        badge: a.badge as string | undefined,
-        runtime: a.runtime as string | undefined,
-      }),
+    handler: async (a, deps) => {
+      // 2026-09-04 (Brioche 599050): resume through crew-service, like spawn and agent_send. The
+      // local orchestrator runs as the CALLER's uid: its credential pre-check cannot read
+      // /Users/_ephemeral/.claude/.credentials.json (0600) and refuses with 'Claude credential
+      // missing', and it writes crews.db (tim-owned). crew-service runs the same resumeAgent
+      // as root with sudo. Local path stays as the fallback when the service is unreachable.
+      const id = a.id as string;
+      try {
+        const rpc = await getCrewRpc();
+        const r = (await rpc.request("crew.agent_resume", {
+          id,
+          cc_session_id: a.cc_session_id,
+          project_dir: a.project_dir,
+          env: a.env,
+          extra_flags: a.extra_flags,
+          badge: a.badge,
+          channels: a.channels,
+        }, 180_000)) as Record<string, unknown>;
+        if (a.attach_to_pane) {
+          try { await deps.orchestrator.attachAgent(id, a.attach_to_pane as string); } catch (e) { r.attach_error = String((e as Error).message).slice(0, 160); }
+        }
+        return { ...r, via: "crew-service" };
+      } catch (e) {
+        const agent = await deps.orchestrator.resumeAgent({
+          id,
+          ccSessionId: a.cc_session_id as string | undefined,
+          projectDir: a.project_dir as string | undefined,
+          env: a.env as Record<string, string> | undefined,
+          channels: a.channels as string[] | undefined,
+          extraFlags: a.extra_flags as string | undefined,
+          attachToPane: a.attach_to_pane as string | undefined,
+          displayName: a.display_name as string | undefined,
+          badge: a.badge as string | undefined,
+          runtime: a.runtime as string | undefined,
+        });
+        return { ...agent, via: "local", crew_service_error: String((e as Error).message).slice(0, 160) };
+      }
+    },
   },
   {
     name: "agent_attach",
