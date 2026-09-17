@@ -346,8 +346,21 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
       required: ["id", "text"],
     },
     handler: async (a, deps) => {
-      const outcome = await deps.orchestrator.setAgentBadge(a.id as string, a.text as string);
-      return { badge_set: a.id, text: a.text, ...outcome };
+      // 2026-09-17 (Brioche): SAME defect and SAME wall as agent_send — the local orchestrator
+      // writes crews.db (owned by tim) and throws 'attempt to write a readonly database' from a
+      // persona uid. agent_send was routed through crew-service on 2026-09-03 (Brioche 597580)
+      // and agent_resume on 09-04, but register/badge were left on the local path, so the
+      // identical failure resurfaced two weeks later on the adjacent handler.
+      // ⇒ A fix applied to the INSTANCE and not the CLASS leaves its siblings holding the defect.
+      //   Every crews.db WRITE in this file now goes through the service.
+      try {
+        const rpc = await getCrewRpc();
+        const r = (await rpc.request("crew.agent_badge", { id: a.id, text: a.text })) as Record<string, unknown>;
+        return { badge_set: a.id, text: a.text, ...r, via: "crew-service" };
+      } catch (e) {
+        const outcome = await deps.orchestrator.setAgentBadge(a.id as string, a.text as string);
+        return { badge_set: a.id, text: a.text, ...outcome, via: "local", crew_service_error: String((e as Error).message).slice(0, 160) };
+      }
     },
   },
   {
@@ -365,14 +378,32 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
       required: ["id", "name"],
     },
     handler: async (a, deps) => {
-      const agent = await deps.orchestrator.registerAgent({
-        id: a.id as string,
-        displayName: a.name as string,
-        runtime: a.runtime as string | undefined,
-        ccSessionId: a.cc_session_id as string | undefined,
-        callerSessionId: await callerSession(deps),
-      });
-      return { registered: agent.id, screen_name: agent.screen_name, pane: agent.pane };
+      // ⛔ Routed through crew-service for the same reason as agent_badge/agent_send: only uid tim
+      // can write crews.db, so the local path fails from EVERY persona. Measured 2026-09-17 —
+      // brioche, vacherin and herald all carried stale-or-missing registry rows while every
+      // crew-service-SPAWNED lane registered correctly. The common factor was the WRITE PATH, not
+      // the callers, and it was misread for a day as personas failing to call register.
+      // ⓘ Self-registration integrity is UNCHANGED: crew-service resolves ownership from its own
+      // multi-UID observation of the caller's screen, so passing caller_session_id cannot let a
+      // caller claim a screen it does not own.
+      const caller = await callerSession(deps);
+      try {
+        const rpc = await getCrewRpc();
+        const r = (await rpc.request("crew.agent_register", {
+          id: a.id, name: a.name, runtime: a.runtime,
+          caller_session_id: caller, cc_session_id: a.cc_session_id,
+        })) as { id?: string; screen_name?: string; pane?: string };
+        return { registered: r.id ?? (a.id as string), screen_name: r.screen_name, pane: r.pane, via: "crew-service" };
+      } catch (e) {
+        const agent = await deps.orchestrator.registerAgent({
+          id: a.id as string,
+          displayName: a.name as string,
+          runtime: a.runtime as string | undefined,
+          ccSessionId: a.cc_session_id as string | undefined,
+          callerSessionId: caller,
+        });
+        return { registered: agent.id, screen_name: agent.screen_name, pane: agent.pane, via: "local", crew_service_error: String((e as Error).message).slice(0, 160) };
+      }
     },
   },
   {
