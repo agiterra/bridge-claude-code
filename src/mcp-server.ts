@@ -120,6 +120,29 @@ async function callerSession(deps: SpawnDeps): Promise<string | undefined> {
   return undefined;
 }
 
+/**
+ * ⛔ A LOCAL FALLBACK THAT WRITES THE REGISTRY CANNOT WORK FROM A PERSONA UID.
+ * crews.db is owned by crew-service's uid; every other process opens the store READ-ONLY
+ * (crew-tools store.ts). Several handlers below try crew-service first and fall back to
+ * `deps.orchestrator.*` on failure — and three of them SAID SO IN A COMMENT while calling the
+ * local path anyway. The fallback then fails, and it replaces crew-service's diagnosis with the
+ * sqlite driver's own "attempt to write a readonly database", which names neither the file, nor
+ * the uid, nor which writer tripped. Brioche lost a boot registration to exactly that (2026-09-21).
+ * ⇒ Call this at the top of any catch whose local path WRITES. It is a no-op wherever the store is
+ *   genuinely writable (crew-service itself, or an operator running as the owning uid), so the
+ *   fallback still works in every case where it could ever have worked.
+ * ⚠️ It gates on the MEASURED store, not on a guess about the uid: a premise in a comment does not
+ *   execute, which is the whole reason this defect survived three separate write-ups of itself.
+ */
+export function assertLocalWritePossible(deps: SpawnDeps, tool: string, rpcErr: string): void {
+  if (!deps.orchestrator.store.readonly) return;
+  throw new Error(
+    `${tool}: crew-service is unreachable AND this process cannot write the registry itself — ` +
+    `crews.db is read-only for uid '${process.env.USER ?? "unknown"}' (by design: only ` +
+    `crew-service's uid may write it). NOTHING WAS CHANGED. crew-service reported: ${rpcErr}`,
+  );
+}
+
 function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -151,6 +174,7 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
         const r = (await rpc.request("crew.agent_send", { id, text, cc_session_id: cc })) as { landed?: boolean; screen?: string };
         return { sent: true, landed: r.landed, screen: r.screen, via: "crew-service" };
       } catch (e) {
+        assertLocalWritePossible(deps, "agent_send", String((e as Error).message).slice(0, 200));
         const sendRes = await deps.orchestrator.sendToAgent(id, text, cc);
         return { sent: true, landed: sendRes.landed, screen: sendRes.screen, via: "local", crew_service_error: String((e as Error).message).slice(0, 160) };
       }
@@ -254,6 +278,7 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
         }
         return { ...r, via: "crew-service" };
       } catch (e) {
+        assertLocalWritePossible(deps, "agent_resume", String((e as Error).message).slice(0, 200));
         const agent = await deps.orchestrator.resumeAgent({
           id,
           ccSessionId: a.cc_session_id as string | undefined,
@@ -358,6 +383,7 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
         const r = (await rpc.request("crew.agent_badge", { id: a.id, text: a.text })) as Record<string, unknown>;
         return { badge_set: a.id, text: a.text, ...r, via: "crew-service" };
       } catch (e) {
+        assertLocalWritePossible(deps, "agent_badge", String((e as Error).message).slice(0, 200));
         const outcome = await deps.orchestrator.setAgentBadge(a.id as string, a.text as string);
         return { badge_set: a.id, text: a.text, ...outcome, via: "local", crew_service_error: String((e as Error).message).slice(0, 160) };
       }
@@ -395,6 +421,8 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
         })) as { id?: string; screen_name?: string; pane?: string };
         return { registered: r.id ?? (a.id as string), screen_name: r.screen_name, pane: r.pane, via: "crew-service" };
       } catch (e) {
+        const rpcErr = String((e as Error).message).slice(0, 200);
+        assertLocalWritePossible(deps, "agent_register", rpcErr);
         const agent = await deps.orchestrator.registerAgent({
           id: a.id as string,
           displayName: a.name as string,
@@ -402,7 +430,7 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
           ccSessionId: a.cc_session_id as string | undefined,
           callerSessionId: caller,
         });
-        return { registered: agent.id, screen_name: agent.screen_name, pane: agent.pane, via: "local", crew_service_error: String((e as Error).message).slice(0, 160) };
+        return { registered: agent.id, screen_name: agent.screen_name, pane: agent.pane, via: "local", crew_service_error: rpcErr.slice(0, 160) };
       }
     },
   },
