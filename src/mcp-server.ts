@@ -447,8 +447,30 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
       required: ["id"],
     },
     handler: async (a, deps) => {
-      await deps.orchestrator.stopAgent(a.id as string, a.cc_session_id as string | undefined);
-      return { stopped: a.id, cc_session_id: a.cc_session_id };
+      // ⛔ ROUTE THROUGH crew-service, AND GATE THE FALLBACK BEFORE ANYTHING IS KILLED.
+      // orchestrator.stopAgent KILLS the session and only THEN writes (tombstoneAgent +
+      // deleteAgentByScreen). From a persona the write throws, so a caller that CAN kill its
+      // target destroys the agent and then fails to record the tombstone — agent_resume can no
+      // longer reconstruct it. Brioche hit this on eng-4315-fv (2026-09-21); it failed safe for
+      // him ONLY because a persona cannot kill an _ephemeral process cross-uid, which is luck,
+      // not design.
+      // ⇒ A destructive step must not run until the process has shown it can RECORD the outcome.
+      //   assertLocalWritePossible is therefore a PRECONDITION here, not a catch-site apology.
+      const rpcArgs = {
+        id: a.id as string,
+        ...(a.cc_session_id ? { cc_session_id: a.cc_session_id } : {}),
+        ...(a.override_reason ? { override_reason: a.override_reason } : {}),
+      };
+      try {
+        const rpc = await getCrewRpc();
+        const r = (await rpc.request("crew.agent_stop", rpcArgs, 120_000)) as Record<string, unknown>;
+        return { ...r, via: "crew-service" };
+      } catch (e) {
+        const rpcErr = String((e as Error).message).slice(0, 200);
+        assertLocalWritePossible(deps, "agent_stop", rpcErr);
+        await deps.orchestrator.stopAgent(a.id as string, a.cc_session_id as string | undefined);
+        return { stopped: a.id, cc_session_id: a.cc_session_id, via: "local", crew_service_error: rpcErr.slice(0, 160) };
+      }
     },
   },
   {
