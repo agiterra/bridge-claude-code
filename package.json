@@ -1,6 +1,6 @@
 {
   "name": "@agiterra/bridge-claude-code",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "license": "MIT",
   "type": "module",
   "bin": "./server.ts",
