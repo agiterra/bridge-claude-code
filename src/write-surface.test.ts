@@ -86,6 +86,7 @@ const CREW_TOOLS_DECLARED = [
   "createAgent", "tombstoneAgent", "setAgentTtl", "setAgentBadge",
   "updateAgentPid", "updateAgentPane", "updateAgentStatus", "touchAgent",
   "deleteAgent", "deleteAgentByScreen", "updateAgentCcSession",
+  "updateAgentRuntime", "updateAgentManifest",
   "createMachine", "deleteMachine", "updateMachineProbe",
 ];
 
