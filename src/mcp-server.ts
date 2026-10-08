@@ -247,7 +247,6 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
         project_dir: { type: "string", description: "Working directory. Defaults to the tombstone manifest's project_dir." },
         env: { type: "object", additionalProperties: { type: "string" }, description: "Env overrides, merged on top of the tombstone's sanitized env. AGENT_PRIVATE_KEY is never in the tombstone — supply it here for Wire-using agents." },
         channels: { type: "array", items: { type: "string" }, description: "Dev-channel plugin list. Overrides the tombstone's recorded list; falls back to ['plugin:wire@agiterra']." },
-        extra_flags: { type: "string", description: "Additional CLI flags appended after --resume. Defaults to tombstone's extra_flags." },
         attach_to_pane: { type: "string", description: "Optional pane to attach the resumed agent to once the screen is up." },
         display_name: { type: "string", description: "Display name. Defaults to tombstone's display_name." },
         badge: { type: "string", description: "Badge text. Defaults to tombstone's badge." },
@@ -269,7 +268,6 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
           cc_session_id: a.cc_session_id,
           project_dir: a.project_dir,
           env: a.env,
-          extra_flags: a.extra_flags,
           badge: a.badge,
           channels: a.channels,
         }, 180_000)) as Record<string, unknown>;
@@ -278,6 +276,7 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
         }
         return { ...r, via: "crew-service" };
       } catch (e) {
+        if (String((e as Error).message).includes("advisor capability is disabled for ephemeral agents")) throw e;
         assertLocalWritePossible(deps, "agent_resume", String((e as Error).message).slice(0, 200));
         const agent = await deps.orchestrator.resumeAgent({
           id,
@@ -285,7 +284,6 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
           projectDir: a.project_dir as string | undefined,
           env: a.env as Record<string, string> | undefined,
           channels: a.channels as string[] | undefined,
-          extraFlags: a.extra_flags as string | undefined,
           attachToPane: a.attach_to_pane as string | undefined,
           displayName: a.display_name as string | undefined,
           badge: a.badge as string | undefined,
