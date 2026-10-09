@@ -60,7 +60,7 @@ its source plugin and proxies straight through to the same `crew-tools` /
 `wire-tools` code — wire tools are signed with the orchestrator's own identity.
 
 - **crew**: `agent_send`, `agent_read`, `agent_list`, `agent_interrupt`,
-  `agent_resume`, `agent_attach`, `agent_detach`, `agent_move`, `agent_swap`,
+  `agent_resume`, `agent_register`, `agent_attach`, `agent_detach`, `agent_move`, `agent_swap`,
   `agent_badge`, `agent_stop`, `pane_create`, `pane_close`, `pane_list`,
   `pane_badge`, `pane_notify`, `pane_register`, `tab_create`, `tab_destroy`,
   `tab_list`, `tab_register`, `machine_list`, `machine_probe`,
@@ -70,9 +70,13 @@ its source plugin and proxies straight through to the same `crew-tools` /
   `heartbeat_delete`, `register_agent`
 
 Excluded from the crew subset because bridge's composites cover them:
-`agent_launch`, `agent_register`, `agent_close`. `wire-ipc`, `knowledge`, and
+`agent_launch`, `agent_close`. `wire-ipc`, `knowledge`, and
 `knowledge-indexer` remain separate plugins — they are not consolidated into
 bridge.
+
+`agent_register` forwards the caller's `STY` screen name and PID to crew-service.
+The service verifies screen ownership before it writes the registry row. A
+terminal session ID alone cannot identify a screen for this operation.
 
 ## Integration plugins
 

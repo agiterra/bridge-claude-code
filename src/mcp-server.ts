@@ -120,6 +120,21 @@ async function callerSession(deps: SpawnDeps): Promise<string | undefined> {
   return undefined;
 }
 
+/** Give crew-service the caller's screen identity for self-registration. */
+export function registerCallerContext(sessionId: string | undefined, sty: string | undefined): string | undefined {
+  if (!sty) return sessionId;
+  const dot = sty.indexOf(".");
+  if (dot < 0) return sessionId;
+  const screenName = sty.slice(dot + 1);
+  const screenPid = Number.parseInt(sty.slice(0, dot), 10);
+  return JSON.stringify({
+    terminal_session_id: sessionId,
+    screen_name: screenName || undefined,
+    screen_pid: Number.isFinite(screenPid) ? screenPid : undefined,
+    sty,
+  });
+}
+
 /**
  * ⛔ A LOCAL FALLBACK THAT WRITES THE REGISTRY CANNOT WORK FROM A PERSONA UID.
  * crews.db is owned by crew-service's uid; every other process opens the store READ-ONLY
@@ -410,7 +425,7 @@ const CREW_PROXY_TOOLS: ProxyTool[] = [
       // ⓘ Self-registration integrity is UNCHANGED: crew-service resolves ownership from its own
       // multi-UID observation of the caller's screen, so passing caller_session_id cannot let a
       // caller claim a screen it does not own.
-      const caller = await callerSession(deps);
+      const caller = registerCallerContext(await callerSession(deps), process.env.STY);
       try {
         const rpc = await getCrewRpc();
         const r = (await rpc.request("crew.agent_register", {
